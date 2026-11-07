@@ -46,6 +46,12 @@ describe('pickStream', () => {
   it('ignores anything that is not https on the media host', () => {
     expect(pickStream({ fhd: 'http://us-east-2.vv-vrv.co/a.m3u8', shd: SHD })).toBe(SHD)
     expect(pickStream({ fhd: 'https://vv-vrv.co.evil.com/a.m3u8', shd: null })).toBeNull()
+    expect(pickStream({ fhd: 'https://evil.com/x.oncourse-content.org', shd: null })).toBeNull()
+  })
+
+  it('aceita a CDN nova do serviço, que o manifesto declara', () => {
+    const url = 'https://wk3.oncourse-content.org/6932/37184/720p.m3u8?signature=s'
+    expect(pickStream({ fhd: null, mhd: url, shd: null })).toBe(url)
     expect(pickStream({ fhd: 'javascript:alert(1)' })).toBeNull()
     expect(pickStream(null)).toBeNull()
   })

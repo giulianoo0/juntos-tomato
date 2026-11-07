@@ -1,6 +1,7 @@
 import type { Api, Stream } from '../api'
 import { safeImageUrl } from '../dom'
 import type { ExtSource, Juntos, PlayRequest } from '../juntos'
+import manifest from '../../juntos.json'
 
 export type Quality = 'fhd' | 'mhd' | 'shd'
 export const QUALITIES: Array<{ id: Quality; label: string }> = [
@@ -10,13 +11,20 @@ export const QUALITIES: Array<{ id: Quality; label: string }> = [
 ]
 
 const ORDER: Quality[] = ['fhd', 'mhd', 'shd']
-const MEDIA_SUFFIX = '.vv-vrv.co'
+// The CDN moves between domains; the manifest says which ones juntos accepts.
+const MEDIA_HOSTS: readonly string[] = manifest.hosts.media
+
+function mediaHost(host: string): boolean {
+  return MEDIA_HOSTS.some((entry) => entry.startsWith('*.')
+    ? host.endsWith(entry.slice(1)) && host.length > entry.length - 1
+    : host === entry)
+}
 
 function mediaUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   try {
     const u = new URL(raw)
-    return u.protocol === 'https:' && u.hostname.endsWith(MEDIA_SUFFIX) && !u.username ? u.href : null
+    return u.protocol === 'https:' && mediaHost(u.hostname) && !u.username ? u.href : null
   } catch {
     return null
   }

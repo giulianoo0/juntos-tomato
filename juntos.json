@@ -17,7 +17,8 @@
       "imgs.hcaptcha.com"
     ],
     "media": [
-      "*.vv-vrv.co"
+      "*.vv-vrv.co",
+      "*.oncourse-content.org"
     ]
   },
   "captcha": "hcaptcha"
