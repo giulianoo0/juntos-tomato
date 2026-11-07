@@ -1,0 +1,24 @@
+{
+  "id": "tomato",
+  "name": "Tomato",
+  "version": "0.1.0",
+  "protocol": 1,
+  "entry": "dist/index.html",
+  "icon": "public/icon.svg",
+  "hosts": {
+    "connect": [
+      "prod-api.tomatoanimes.com",
+      "edge.betomato.com",
+      "api.hcaptcha.com",
+      "hcaptcha.com"
+    ],
+    "images": [
+      "cdn.tomatoanimes.com",
+      "imgs.hcaptcha.com"
+    ],
+    "media": [
+      "*.vv-vrv.co"
+    ]
+  },
+  "captcha": "hcaptcha"
+}

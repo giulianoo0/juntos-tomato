@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tomato · harness</title>
+    <style>
+      body { margin: 0; font: 13px/1.5 system-ui, sans-serif; background: #0f0f0f; color: #ededed; }
+      header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #ffffff14; }
+      textarea { width: 360px; height: 34px; resize: vertical; font: 12px ui-monospace, monospace; background: #1f1f1f; color: inherit; border: 1px solid #ffffff1f; border-radius: 8px; padding: 6px 8px; }
+      button, select { font: inherit; color: inherit; background: #282828; border: 1px solid #ffffff1f; border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+      main { display: grid; place-items: start center; padding: 24px; }
+      iframe { border: 0; border-radius: 18px; background: #0f0f0f; box-shadow: 0 0 0 1px #ffffff14, 0 20px 44px -20px #000; }
+      p { margin: 0; color: #9b9b9b; max-width: 60ch; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <!-- Paste the content of a Tomato session.json ({session:{access_token, refresh_token_proposed, account}})
+           or the extension's own {accessToken, refreshToken, expiresAt, account}. It goes to this origin's
+           localStorage under tomato.session, the key the extension reads. Never commit a session. -->
+      <textarea id="session" placeholder="session.json" spellcheck="false"></textarea>
+      <button id="save" type="button">Salvar sessão</button>
+      <button id="forget" type="button">Esquecer sessão</button>
+      <select id="size">
+        <option value="1100x760">Painel 1100×760</option>
+        <option value="760x640">Painel 760×640</option>
+        <option value="360x720">Celular 360×720</option>
+      </select>
+      <label><input id="canplay" type="checkbox" checked /> canPlay</label>
+      <p id="status"></p>
+    </header>
+    <main><iframe id="frame" title="Tomato"></iframe></main>
+    <script type="module">
+      const $ = (id) => document.getElementById(id)
+      const frame = $('frame')
+      const load = () => {
+        const [w, h] = $('size').value.split('x')
+        frame.width = w
+        frame.height = h
+        frame.src = `/?canPlay=${$('canplay').checked ? 1 : 0}`
+      }
+      const status = () => {
+        const s = localStorage.getItem('tomato.session')
+        $('status').textContent = s ? 'Sessão salva neste navegador' : 'Sem sessão: a extensão abre no login'
+      }
+      $('save').addEventListener('click', () => {
+        try {
+          const raw = JSON.parse($('session').value)
+          let s = raw
+          if (raw.session) {
+            const at = (raw.session.refreshed_at ?? raw.refreshed_at ?? raw.received_at ?? Date.now() / 1000) * 1000
+            s = {
+              accessToken: raw.session.access_token,
+              refreshToken: raw.session.refresh_token_proposed ?? raw.session.refresh_token,
+              expiresAt: at + (raw.session.expires_in ?? 1800) * 1000,
+              account: raw.session.account,
+            }
+          }
+          if (!s.accessToken || !s.refreshToken) throw new Error('faltam tokens')
+          localStorage.setItem('tomato.session', JSON.stringify(s))
+          $('session').value = ''
+          status()
+          load()
+        } catch (e) {
+          $('status').textContent = `Não reconheci a sessão: ${e.message}`
+        }
+      })
+      $('forget').addEventListener('click', () => { localStorage.removeItem('tomato.session'); status(); load() })
+      $('size').addEventListener('change', load)
+      $('canplay').addEventListener('change', load)
+      status()
+      load()
+    </script>
+  </body>
+</html>
