@@ -23,6 +23,8 @@ describe('login', () => {
       ['device_model', 'email', 'fingerprint', 'password', 'refresh_token', 'verification'],
     )
     expect(body).toMatchObject({ email: 'a@b.c', password: 'pw', verification: 'cap' })
+    expect(body).toMatchObject({ device_model: 'SM-A546E', fingerprint: '14/samsung/SM-A546E' })
+    expect(calls[0].headers['user-agent']).toBe('tomato-android')
     expect(body.refresh_token).toMatch(/^[A-Za-z0-9_-]{43}$/)
   })
 

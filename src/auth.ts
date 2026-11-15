@@ -1,9 +1,15 @@
 export const API = 'https://prod-api.tomatoanimes.com'
 export const APP_VERSION = '1.5.1'
 
-// The Android app sends `<release>/<manufacturer>/<model>`; same shape, honest values.
-const FINGERPRINT = '1/juntos/web'
-const DEVICE_MODEL = 'juntos web'
+// As the Android app: `device_model` is Build.MODEL, `fingerprint` is `<release>/<manufacturer>/<model>`.
+const DEVICE_MODEL = 'SM-A546E'
+const FINGERPRINT = `14/samsung/${DEVICE_MODEL}`
+
+export function apiHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = { 'user-agent': 'tomato-android', 'x-app': APP_VERSION }
+  if (token) headers.authorization = `Bearer ${token}`
+  return headers
+}
 
 export interface Account {
   uuid: string
@@ -55,8 +61,7 @@ export function newRefreshToken(): string {
 }
 
 export async function authPost(deps: AuthDeps, path: string, body: unknown, token?: string): Promise<unknown> {
-  const headers: Record<string, string> = { 'content-type': 'application/json', 'x-app': APP_VERSION }
-  if (token) headers.authorization = `Bearer ${token}`
+  const headers = { ...apiHeaders(token), 'content-type': 'application/json' }
   let res: Response
   try {
     res = await deps.fetch(`${API}${path}`, { method: 'POST', headers, body: JSON.stringify(body) })

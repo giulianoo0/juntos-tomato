@@ -1,4 +1,4 @@
-import { API, APP_VERSION, AuthError, authPost, refreshSession, type Session, type SessionStore } from './auth'
+import { API, apiHeaders, AuthError, authPost, refreshSession, type Session, type SessionStore } from './auth'
 
 const RENEW_BEFORE_MS = 2 * 60_000
 export const EPISODE_PAGE = 25
@@ -76,7 +76,7 @@ export function createApi(deps: ApiDeps) {
   }
 
   async function send(method: string, path: string, body: unknown, token: string): Promise<Response> {
-    const headers: Record<string, string> = { authorization: `Bearer ${token}`, 'x-app': APP_VERSION }
+    const headers = apiHeaders(token)
     if (body !== undefined) headers['content-type'] = 'application/json'
     try {
       return await deps.fetch(`${API}${path}`, {

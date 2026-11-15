@@ -16,7 +16,7 @@ function signedIn(over: Partial<Session> = {}) {
 }
 
 describe('api requests', () => {
-  it('sends the bearer token, the app version and JSON', async () => {
+  it('sends the bearer token, the app headers and JSON', async () => {
     const { fetch, calls } = fakeFetch(json(200, { result: [] }))
     const api = createApi({ fetch, store: signedIn(), now: () => NOW })
     await api.request('POST', '/v2/content/search', { search: 'x' })
@@ -24,6 +24,7 @@ describe('api requests', () => {
     expect(calls[0].url).toBe(`${API}/v2/content/search`)
     expect(calls[0].headers.authorization).toBe('Bearer acc-1')
     expect(calls[0].headers['x-app']).toBe('1.5.1')
+    expect(calls[0].headers['user-agent']).toBe('tomato-android')
     expect(calls[0].headers['content-type']).toBe('application/json')
     expect(calls[0].body).toEqual({ search: 'x' })
   })
