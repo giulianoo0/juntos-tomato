@@ -84,6 +84,28 @@ describe('app', () => {
     expect(root.querySelector('.view.home')).not.toBeNull()
   })
 
+  it('espera a sessão guardada no app antes da primeira tela', async () => {
+    root = document.createElement('div')
+    document.body.append(root)
+    const { juntos, h } = fakeJuntos()
+    const f = apiFetch({ '/v2/animes/feed': { data: [] } })
+    const kept = signedInStorage()
+    const storage = memoryStorage()
+    let loaded!: () => void
+    const load = vi.fn((keys: string[]) => new Promise<void>((r) => {
+      loaded = () => { for (const k of keys) { const v = kept.getItem(k); if (v) storage.setItem(k, v) } r() }
+    }))
+    createApp({ root, juntos, storage, load, fetch: f.fetch, now: () => NOW, captcha })
+    h.init!(init(true))
+    await settle()
+    expect(root.querySelector('.view')).toBeNull()
+
+    loaded()
+    await settle()
+    expect(load).toHaveBeenCalledWith(['tomato.session', 'tomato.quality'])
+    expect(root.querySelector('.view.home')).not.toBeNull()
+  })
+
   it('waits for init before the first screen, but not forever', async () => {
     vi.useFakeTimers()
     const { calls } = mount(signedInStorage(), {}, null)

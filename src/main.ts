@@ -2,25 +2,7 @@ import '@fontsource-variable/geist'
 import './styles.css'
 import { createApp } from './app'
 import { mountHcaptcha } from './captcha'
-
-function localStorageOrMemory(): Storage {
-  try {
-    const k = '__tomato_probe'
-    localStorage.setItem(k, '1')
-    localStorage.removeItem(k)
-    return localStorage
-  } catch {
-    const m = new Map<string, string>()
-    return {
-      get length() { return m.size },
-      clear: () => m.clear(),
-      getItem: (k) => m.get(k) ?? null,
-      key: (i) => [...m.keys()][i] ?? null,
-      removeItem: (k) => { m.delete(k) },
-      setItem: (k, v) => { m.set(k, String(v)) },
-    }
-  }
-}
+import { keptStorage } from './kept'
 
 async function boot() {
   if (import.meta.env.DEV && !window.juntos) {
@@ -33,10 +15,12 @@ async function boot() {
     root.textContent = 'Abra a Tomato pelo juntos'
     return
   }
+  const storage = keptStorage(juntos)
   createApp({
     root,
     juntos,
-    storage: localStorageOrMemory(),
+    storage,
+    load: (keys) => storage.load(keys),
     fetch: (juntos.fetch?.bind(juntos) ?? window.fetch.bind(window)) as typeof fetch,
     captcha: mountHcaptcha,
   })

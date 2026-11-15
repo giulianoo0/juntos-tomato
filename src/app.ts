@@ -17,12 +17,15 @@ export interface AppDeps {
   root: HTMLElement
   juntos: Juntos
   storage: Storage
+  /** Fills `storage` from where it outlives the page, before the first screen. */
+  load?(keys: string[]): Promise<void>
   fetch: typeof fetch
   now?: () => number
   captcha(host: HTMLElement, theme: 'dark' | 'light'): Captcha
 }
 
 const QUALITY_KEY = 'tomato.quality'
+const SESSION_KEY = 'tomato.session'
 const INIT_WAIT_MS = 800
 
 function readQuality(storage: Storage): Quality {
@@ -36,11 +39,13 @@ function readQuality(storage: Storage): Quality {
 
 export function createApp(deps: AppDeps) {
   const { root, juntos, storage } = deps
-  const store = sessionStore(storage)
+  const store = sessionStore(storage, SESSION_KEY)
   const api = createApi({ fetch: deps.fetch, store, now: deps.now })
   let canPlay = false
   let mode: 'dark' | 'light' = root.ownerDocument.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
-  let quality = readQuality(storage)
+  // The stored quality may still be loading; what was chosen here wins.
+  let chosen: Quality | null = null
+  const quality = () => chosen ?? readQuality(storage)
   // Each screen keeps its element, so going back finds it as it was left.
   let stack: Array<{ route: Route; el?: HTMLElement; scroll: number }> = []
   const win = root.ownerDocument.defaultView
@@ -61,15 +66,15 @@ export function createApp(deps: AppDeps) {
     play: async (ep) => {
       if (!canPlay) return
       try {
-        await playEpisode({ api, juntos }, ep, quality)
+        await playEpisode({ api, juntos }, ep, quality())
       } catch (e) {
         juntos.toast(e instanceof Error && e.message ? e.message : 'Não deu para abrir o episódio')
       }
     },
     canPlay: () => canPlay,
-    quality: () => quality,
+    quality,
     setQuality: (q) => {
-      quality = q
+      chosen = q
       try { storage.setItem(QUALITY_KEY, q) } catch { /* only for this visit */ }
     },
     signedIn: (s) => {
@@ -172,11 +177,13 @@ export function createApp(deps: AppDeps) {
     const could = canPlay
     canPlay = m.canPlay === true
     mode = m.theme?.mode === 'light' ? 'light' : 'dark'
-    if (!started) start()
-    else if (could !== canPlay) rebuild()
+    if (!started) {
+      clearTimeout(fallback)
+      void (deps.load?.([SESSION_KEY, QUALITY_KEY]) ?? Promise.resolve()).finally(start)
+    } else if (could !== canPlay) rebuild()
   })
   juntos.onTheme((t) => { mode = t?.mode === 'light' ? 'light' : 'dark' })
-  juntos.onRefresh((ref) => refreshSource(api, ref, quality))
+  juntos.onRefresh((ref) => refreshSource(api, ref, quality()))
   root.ownerDocument.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !e.defaultPrevented && !root.ownerDocument.querySelector('.popover')) juntos.close()
   })

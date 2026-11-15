@@ -16,6 +16,8 @@ export interface InitMessage {
   canPlay: boolean
   /** The desktop app sends `juntos.fetch` calls itself, with the service's User-Agent. */
   fetch?: boolean
+  /** The desktop app keeps `juntos.store` sealed on disk. */
+  store?: boolean
 }
 
 export interface PlayRequest {
@@ -36,6 +38,11 @@ export interface Juntos {
   toast(text: string): void
   /** fetch that, in the desktop app, goes out through the app with the User-Agent the webview drops. */
   fetch?(url: string | URL, init?: RequestInit): Promise<Response>
+  /** Text kept across visits; in the desktop app, sealed with a key in the system keychain. */
+  store?: {
+    get(key: string): Promise<string | null>
+    set(key: string, value: string | null): Promise<void>
+  }
 }
 
 declare global {

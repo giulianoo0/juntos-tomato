@@ -14,7 +14,7 @@ export function installDevSdk() {
   const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true
   const theme: ThemeTokens = { mode: dark ? 'dark' : 'light', vars: {} }
   const params = new URLSearchParams(location.search)
-  const init: InitMessage = { theme, locale: 'pt-BR', canPlay: params.get('canPlay') !== '0', fetch: true }
+  const init: InitMessage = { theme, locale: 'pt-BR', canPlay: params.get('canPlay') !== '0', fetch: true, store: true }
   let onInit: ((m: InitMessage) => void) | null = null
   let onRefresh: ((ref: string) => Promise<ExtSource | null>) | null = null
   document.documentElement.dataset.theme = theme.mode
@@ -30,6 +30,10 @@ export function installDevSdk() {
     },
     close: () => console.info('[juntos dev] close'),
     toast: (text) => devToast(text),
+    store: {
+      get: async (k) => localStorage.getItem(k),
+      set: async (k, v) => { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v) },
+    },
   }
   window.juntos = juntos
   // From the console: await __juntosDev.refresh('15228')
