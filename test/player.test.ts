@@ -73,6 +73,20 @@ describe('playEpisode', () => {
     })
   })
 
+  it('names the server it refused, so its host can be let in', async () => {
+    const { api } = apiWith(json(200, streamBody({ fhd: 'https://cdn9.outra-cdn.net/a/1080p.m3u8', mhd: 'http://us-east-2.vv-vrv.co/m.m3u8', shd: null })))
+    const juntos = fakeJuntos()
+    await expect(playEpisode({ api, juntos }, { id: 15228, title: 'Link Click' }))
+      .rejects.toThrow('Episódio em servidor não liberado: cdn9.outra-cdn.net, us-east-2.vv-vrv.co')
+    expect(juntos.play).not.toHaveBeenCalled()
+  })
+
+  it('without any stream it is just unavailable', async () => {
+    const { api } = apiWith(json(200, streamBody({ fhd: null, mhd: null, shd: null })))
+    await expect(playEpisode({ api, juntos: fakeJuntos() }, { id: 15228, title: 'Link Click' }))
+      .rejects.toThrow('Episódio indisponível')
+  })
+
   it('plays without waiting on any timer after the stream arrives', async () => {
     vi.useFakeTimers()
     const { api } = apiWith(json(200, streamBody({ fhd: FHD })))

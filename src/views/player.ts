@@ -42,6 +42,18 @@ export function pickStream(streams: Stream['streams'] | undefined, preferred: Qu
   return null
 }
 
+/** Hosts of the stream urls the service sent that juntos would not take. */
+export function refusedHosts(streams: Stream['streams'] | undefined): string[] {
+  if (!streams || typeof streams !== 'object') return []
+  const hosts = new Set<string>()
+  for (const q of ORDER) {
+    const raw = streams[q]
+    if (typeof raw !== 'string' || raw === '' || mediaUrl(raw)) continue
+    try { hosts.add(new URL(raw).host) } catch { hosts.add('?') }
+  }
+  return [...hosts]
+}
+
 export interface EpisodeToPlay {
   id: number
   title: string
@@ -59,7 +71,10 @@ export async function playEpisode(
 ): Promise<void> {
   const s = await deps.api.stream(ep.id)
   const url = pickStream(s?.streams, quality)
-  if (!url) throw new Error('Episódio indisponível')
+  if (!url) {
+    const hosts = refusedHosts(s?.streams)
+    throw new Error(hosts.length ? `Episódio em servidor não liberado: ${hosts.join(', ')}` : 'Episódio indisponível')
+  }
   const req: PlayRequest = { title: ep.title.slice(0, 300), ref: String(ep.id), source: { kind: 'hls', url } }
   if (typeof s.episodeName === 'string' && s.episodeName) req.subtitle = s.episodeName.slice(0, 300)
   const poster = safeImageUrl(ep.poster)
