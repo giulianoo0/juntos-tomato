@@ -41,7 +41,7 @@ function signedInStorage() {
   return s
 }
 
-const init = (canPlay: boolean): InitMessage => ({ theme: { mode: 'dark', vars: {} }, locale: 'pt-BR', canPlay })
+const init = (canPlay: boolean, fetch = true): InitMessage => ({ theme: { mode: 'dark', vars: {} }, locale: 'pt-BR', canPlay, fetch })
 const captcha = () => ({ token: () => 'cap', reset: () => {} })
 
 let root: HTMLElement
@@ -58,6 +58,18 @@ function mount(storage: Storage, routes: Record<string, unknown> = {}, canPlay: 
 }
 
 describe('app', () => {
+  it('fora do app desktop, só avisa e não chama a API', async () => {
+    root = document.createElement('div')
+    document.body.append(root)
+    const { juntos, h } = fakeJuntos()
+    const f = apiFetch({})
+    createApp({ root, juntos, storage: signedInStorage(), fetch: f.fetch, now: () => NOW, captcha })
+    h.init!(init(true, false))
+    await settle()
+    expect(root.textContent).toContain('A Tomato funciona só no app juntos para computador')
+    expect(f.calls).toEqual([])
+  })
+
   it('says ready and starts on sign-in without a session', async () => {
     const { juntos } = mount(memoryStorage())
     await settle()

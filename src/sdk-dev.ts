@@ -14,7 +14,7 @@ export function installDevSdk() {
   const dark = window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true
   const theme: ThemeTokens = { mode: dark ? 'dark' : 'light', vars: {} }
   const params = new URLSearchParams(location.search)
-  const init: InitMessage = { theme, locale: 'pt-BR', canPlay: params.get('canPlay') !== '0' }
+  const init: InitMessage = { theme, locale: 'pt-BR', canPlay: params.get('canPlay') !== '0', fetch: true }
   let onInit: ((m: InitMessage) => void) | null = null
   let onRefresh: ((ref: string) => Promise<ExtSource | null>) | null = null
   document.documentElement.dataset.theme = theme.mode

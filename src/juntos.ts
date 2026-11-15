@@ -14,6 +14,8 @@ export interface InitMessage {
   theme: ThemeTokens
   locale: string
   canPlay: boolean
+  /** The desktop app sends `juntos.fetch` calls itself, with the service's User-Agent. */
+  fetch?: boolean
 }
 
 export interface PlayRequest {

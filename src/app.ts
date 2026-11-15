@@ -160,6 +160,15 @@ export function createApp(deps: AppDeps) {
   }
   const fallback = setTimeout(start, INIT_WAIT_MS)
   juntos.onInit((m) => {
+    // The service's API takes only its app's User-Agent, which only the desktop app sends.
+    if (m.fetch !== true) {
+      started = true
+      clearTimeout(fallback)
+      clear(bar)
+      clear(stage)
+      stage.append(h('p', { class: 'empty' }, 'A Tomato funciona só no app juntos para computador'))
+      return
+    }
     const could = canPlay
     canPlay = m.canPlay === true
     mode = m.theme?.mode === 'light' ? 'light' : 'dark'
