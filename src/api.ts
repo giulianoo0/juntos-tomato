@@ -1,4 +1,4 @@
-import { API, apiHeaders, AuthError, authPost, refreshSession, type Session, type SessionStore } from './auth'
+import { API, APP_VERSION, AuthError, bearer, LEGACY_AGENT, OKHTTP_AGENT, authPost, refreshSession, type Session, type SessionStore } from './auth'
 
 const RENEW_BEFORE_MS = 2 * 60_000
 export const EPISODE_PAGE = 25
@@ -75,9 +75,12 @@ export function createApi(deps: ApiDeps) {
     return renewing
   }
 
-  async function send(method: string, path: string, body: unknown, token: string): Promise<Response> {
-    const headers = apiHeaders(token)
-    if (body !== undefined) headers['content-type'] = 'application/json'
+  async function send(method: string, path: string, body: unknown, token: string, extra: Record<string, string>): Promise<Response> {
+    const headers: Record<string, string> = {
+      'user-agent': OKHTTP_AGENT, accept: 'application/json, text/plain, */*',
+      ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...extra, ...bearer(token),
+    }
     try {
       return await deps.fetch(`${API}${path}`, {
         method, headers, body: body === undefined ? undefined : JSON.stringify(body),
@@ -87,17 +90,17 @@ export function createApi(deps: ApiDeps) {
     }
   }
 
-  async function request<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+  async function request<T = unknown>(method: string, path: string, body?: unknown, extra: Record<string, string> = {}): Promise<T> {
     let s = deps.store.get()
     if (!s) {
       signOut()
       throw new ApiError(401, 'Entre de novo')
     }
     if (now() >= s.expiresAt - RENEW_BEFORE_MS) s = await renew(s)
-    let res = await send(method, path, body, s.accessToken)
+    let res = await send(method, path, body, s.accessToken, extra)
     if (res.status === 401) {
       s = await renew(s)
-      res = await send(method, path, body, s.accessToken)
+      res = await send(method, path, body, s.accessToken, extra)
     }
     if (!res.ok) {
       throw new ApiError(res.status, res.status === 429 ? 'Muitas tentativas, espere um pouco' : undefined)
@@ -118,11 +121,14 @@ export function createApi(deps: ApiDeps) {
   return {
     request,
     logout,
-    feed: () => request<Feed>('GET', '/v2/animes/feed'),
+    feed: () => request<Feed>('GET', '/v2/animes/feed', undefined, { 'x-app': APP_VERSION }),
     anime: (id: number) => request<AnimePage>('GET', `/v2/anime/${id}`),
     episodes: (seasonId: number, offset: number) =>
       request<EpisodePage>('GET', `/v3/seasons/${seasonId}/episodes?order=asc&limit=${EPISODE_PAGE}&offset=${offset}`),
-    stream: (episodeId: number) => request<Stream>('GET', `/v2/anime/episode/${episodeId}/stream`),
+    // The app's player asks for the stream through its older stack, with its own agent.
+    stream: (episodeId: number) => request<Stream>('GET', `/v2/anime/episode/${episodeId}/stream`, undefined, {
+      'user-agent': LEGACY_AGENT, 'content-type': 'application/json',
+    }),
     search: (text: string, page: number) =>
       request<SearchPage>('POST', '/v2/content/search', { search: text, content_type: 'anime', page }),
     session: () => deps.store.get(),

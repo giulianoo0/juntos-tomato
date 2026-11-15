@@ -5,10 +5,12 @@ export const APP_VERSION = '1.5.1'
 const DEVICE_MODEL = 'SM-A546E'
 const FINGERPRINT = `14/samsung/${DEVICE_MODEL}`
 
-export function apiHeaders(token?: string): Record<string, string> {
-  const headers: Record<string, string> = { 'user-agent': 'tomato-android', 'x-app': APP_VERSION }
-  if (token) headers.authorization = `Bearer ${token}`
-  return headers
+// Headers as the Android app sends them; they differ by which of its stacks makes the call.
+export const OKHTTP_AGENT = 'okhttp/4.11.0'
+export const LEGACY_AGENT = 'tomato-android'
+
+export function bearer(token?: string): Record<string, string> {
+  return token ? { authorization: `Bearer ${token}` } : {}
 }
 
 export interface Account {
@@ -61,7 +63,7 @@ export function newRefreshToken(): string {
 }
 
 export async function authPost(deps: AuthDeps, path: string, body: unknown, token?: string): Promise<unknown> {
-  const headers = { ...apiHeaders(token), 'content-type': 'application/json' }
+  const headers = { 'user-agent': OKHTTP_AGENT, 'content-type': 'application/json; charset=utf-8', ...bearer(token) }
   let res: Response
   try {
     res = await deps.fetch(`${API}${path}`, { method: 'POST', headers, body: JSON.stringify(body) })

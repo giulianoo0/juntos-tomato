@@ -32,6 +32,8 @@ export interface Juntos {
   play(p: PlayRequest): void
   close(): void
   toast(text: string): void
+  /** fetch that, in the desktop app, goes out through the app with the User-Agent the webview drops. */
+  fetch?(url: string | URL, init?: RequestInit): Promise<Response>
 }
 
 declare global {

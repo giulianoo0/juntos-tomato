@@ -16,17 +16,35 @@ function signedIn(over: Partial<Session> = {}) {
 }
 
 describe('api requests', () => {
-  it('sends the bearer token, the app headers and JSON', async () => {
+  it('sends the bearer token and JSON as the app does', async () => {
     const { fetch, calls } = fakeFetch(json(200, { result: [] }))
     const api = createApi({ fetch, store: signedIn(), now: () => NOW })
-    await api.request('POST', '/v2/content/search', { search: 'x' })
+    await api.search('x', 1)
 
     expect(calls[0].url).toBe(`${API}/v2/content/search`)
-    expect(calls[0].headers.authorization).toBe('Bearer acc-1')
+    expect(calls[0].headers).toEqual({
+      authorization: 'Bearer acc-1',
+      'user-agent': 'okhttp/4.11.0',
+      accept: 'application/json, text/plain, */*',
+      'content-type': 'application/json',
+    })
+    expect(calls[0].body).toEqual({ search: 'x', content_type: 'anime', page: 1 })
+  })
+
+  it('sends the app version only with the feed', async () => {
+    const { fetch, calls } = fakeFetch(json(200, {}), json(200, {}))
+    const api = createApi({ fetch, store: signedIn(), now: () => NOW })
+    await api.feed()
+    await api.anime(1)
     expect(calls[0].headers['x-app']).toBe('1.5.1')
-    expect(calls[0].headers['user-agent']).toBe('tomato-android')
-    expect(calls[0].headers['content-type']).toBe('application/json')
-    expect(calls[0].body).toEqual({ search: 'x' })
+    expect(calls[1].headers['x-app']).toBeUndefined()
+  })
+
+  it('asks for the stream with the player agent', async () => {
+    const { fetch, calls } = fakeFetch(json(200, {}))
+    const api = createApi({ fetch, store: signedIn(), now: () => NOW })
+    await api.stream(9)
+    expect(calls[0].headers).toMatchObject({ 'user-agent': 'tomato-android', 'content-type': 'application/json', authorization: 'Bearer acc-1' })
   })
 
   it('refreshes once on 401 and repeats the request with the new token', async () => {

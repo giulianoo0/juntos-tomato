@@ -37,7 +37,7 @@ async function boot() {
     root,
     juntos,
     storage: localStorageOrMemory(),
-    fetch: window.fetch.bind(window),
+    fetch: (juntos.fetch?.bind(juntos) ?? window.fetch.bind(window)) as typeof fetch,
     captcha: mountHcaptcha,
   })
 }
