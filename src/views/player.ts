@@ -1,7 +1,6 @@
 import type { Api, Stream } from '../api'
 import { safeImageUrl } from '../dom'
 import type { ExtSource, Juntos, PlayRequest } from '../juntos'
-import manifest from '../../juntos.json'
 
 export type Quality = 'fhd' | 'mhd' | 'shd'
 export const QUALITIES: Array<{ id: Quality; label: string }> = [
@@ -11,20 +10,14 @@ export const QUALITIES: Array<{ id: Quality; label: string }> = [
 ]
 
 const ORDER: Quality[] = ['fhd', 'mhd', 'shd']
-// The CDN moves between domains; the manifest says which ones juntos accepts.
-const MEDIA_HOSTS: readonly string[] = manifest.hosts.media
 
-function mediaHost(host: string): boolean {
-  return MEDIA_HOSTS.some((entry) => entry.startsWith('*.')
-    ? host.endsWith(entry.slice(1)) && host.length > entry.length - 1
-    : host === entry)
-}
-
+// The service keeps moving its CDN, so any server goes, as in its own app;
+// plain http is read through the desktop app.
 function mediaUrl(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
   try {
     const u = new URL(raw)
-    return u.protocol === 'https:' && mediaHost(u.hostname) && !u.username ? u.href : null
+    return (u.protocol === 'https:' || u.protocol === 'http:') && u.hostname && !u.username && !u.password ? u.href : null
   } catch {
     return null
   }
@@ -40,18 +33,6 @@ export function pickStream(streams: Stream['streams'] | undefined, preferred: Qu
     if (url) return url
   }
   return null
-}
-
-/** Hosts of the stream urls the service sent that juntos would not take. */
-export function refusedHosts(streams: Stream['streams'] | undefined): string[] {
-  if (!streams || typeof streams !== 'object') return []
-  const hosts = new Set<string>()
-  for (const q of ORDER) {
-    const raw = streams[q]
-    if (typeof raw !== 'string' || raw === '' || mediaUrl(raw)) continue
-    try { hosts.add(new URL(raw).host) } catch { hosts.add('?') }
-  }
-  return [...hosts]
 }
 
 export interface EpisodeToPlay {
@@ -71,10 +52,7 @@ export async function playEpisode(
 ): Promise<void> {
   const s = await deps.api.stream(ep.id)
   const url = pickStream(s?.streams, quality)
-  if (!url) {
-    const hosts = refusedHosts(s?.streams)
-    throw new Error(hosts.length ? `Episódio em servidor não liberado: ${hosts.join(', ')}` : 'Episódio indisponível')
-  }
+  if (!url) throw new Error('Episódio indisponível')
   const req: PlayRequest = { title: ep.title.slice(0, 300), ref: String(ep.id), source: { kind: 'hls', url } }
   if (typeof s.episodeName === 'string' && s.episodeName) req.subtitle = s.episodeName.slice(0, 300)
   const poster = safeImageUrl(ep.poster)

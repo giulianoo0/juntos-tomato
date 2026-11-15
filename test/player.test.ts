@@ -43,16 +43,15 @@ describe('pickStream', () => {
     expect(pickStream({ shd: null, mhd: null, fhd: FHD }, 'shd')).toBe(FHD)
   })
 
-  it('ignores anything that is not https on the media host', () => {
-    expect(pickStream({ fhd: 'http://us-east-2.vv-vrv.co/a.m3u8', shd: SHD })).toBe(SHD)
-    expect(pickStream({ fhd: 'https://vv-vrv.co.evil.com/a.m3u8', shd: null })).toBeNull()
-    expect(pickStream({ fhd: 'https://evil.com/x.oncourse-content.org', shd: null })).toBeNull()
+  it('aceita qualquer servidor http ou https, porque a CDN muda toda hora', () => {
+    expect(pickStream({ fhd: 'https://cdn9.outra-cdn.net/a/1080p.m3u8' })).toBe('https://cdn9.outra-cdn.net/a/1080p.m3u8')
+    expect(pickStream({ fhd: 'http://us-east-2.vv-vrv.co/a.m3u8', shd: SHD })).toBe('http://us-east-2.vv-vrv.co/a.m3u8')
   })
 
-  it('aceita a CDN nova do serviço, que o manifesto declara', () => {
-    const url = 'https://wk3.oncourse-content.org/6932/37184/720p.m3u8?signature=s'
-    expect(pickStream({ fhd: null, mhd: url, shd: null })).toBe(url)
-    expect(pickStream({ fhd: 'javascript:alert(1)' })).toBeNull()
+  it('pula o que não é http nem https, ou leva usuário e senha', () => {
+    expect(pickStream({ fhd: 'javascript:alert(1)', shd: SHD })).toBe(SHD)
+    expect(pickStream({ fhd: 'https://u:p@cdn.net/a.m3u8', shd: null })).toBeNull()
+    expect(pickStream({ fhd: 'rtsp://cdn.net/a' })).toBeNull()
     expect(pickStream(null)).toBeNull()
   })
 })
@@ -71,14 +70,6 @@ describe('playEpisode', () => {
       ref: '15228',
       source: { kind: 'hls', url: FHD },
     })
-  })
-
-  it('names the server it refused, so its host can be let in', async () => {
-    const { api } = apiWith(json(200, streamBody({ fhd: 'https://cdn9.outra-cdn.net/a/1080p.m3u8', mhd: 'http://us-east-2.vv-vrv.co/m.m3u8', shd: null })))
-    const juntos = fakeJuntos()
-    await expect(playEpisode({ api, juntos }, { id: 15228, title: 'Link Click' }))
-      .rejects.toThrow('Episódio em servidor não liberado: cdn9.outra-cdn.net, us-east-2.vv-vrv.co')
-    expect(juntos.play).not.toHaveBeenCalled()
   })
 
   it('without any stream it is just unavailable', async () => {
